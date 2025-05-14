@@ -6,11 +6,29 @@ const Stripe = require("stripe");
 const app = express();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Debugging: Check the Stripe Secret Key is properly loaded
+console.log("Stripe Secret Key:", process.env["STRIPE_SECRET_KEY"]);
+
 // Middleware
 app.use(bodyParser.json());
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+// Check if the Firebase service account is available in the environment
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  console.error("Firebase service account environment variable is missing!");
+  process.exit(1); // Exit the app if it's not available
+}
 
+let serviceAccount;
+try {
+  // Parse the service account JSON string from the environment variable
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  console.log("Firebase service account loaded successfully.");
+} catch (error) {
+  console.error("Error parsing Firebase service account:", error);
+  process.exit(1); // Exit the app if the parsing fails
+}
+
+// Initialize Firebase Admin SDK with the service account credentials
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -31,9 +49,20 @@ app.post("/webhook", async (req, res) => {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
+      // Log session data to verify the correct structure
+      console.log("Received Stripe session:", session);
+
       // Extract 'amount_subtotal' as 'tickets' and 'custom_fields' for 'playername'
-      const tickets = session.amount_subtotal || 0; // Amount in smallest currency unit (e.g., cents)
+
+      // Recalculate tickets based on $0.50 = 50 cents
+      const tickets = session.amount_subtotal
+        ? Math.round(session.amount_subtotal / 50)
+        : 0;
+
       const playerName = session.custom_fields?.[0]?.text?.value || "Unknown"; // Assuming the player name is in custom_fields[0].text.value
+
+      // Log extracted data to debug
+      console.log(`Extracted playerName: ${playerName}, tickets: ${tickets}`);
 
       // Get current timestamp and format it
       const timestamp = formatTimestamp(Date.now()); // Get current time in custom format
