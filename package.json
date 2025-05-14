@@ -10,6 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^22.13.11"
+    "@types/node": "^22.13.11",
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
+    "stripe": "^18.1.0"
   }
 }
